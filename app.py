@@ -158,7 +158,7 @@ def analyze_image():
         
         lime_explanation_path = os.path.join('static/explanations', f"{file.filename.split('.')[0]}_lime_explanation.png")
         plt.imshow(mark_boundaries(temp, mask))
-        plt.title("LIME Explanation")
+        # plt.title("LIME Explanation")
         plt.axis('off')
         plt.savefig(lime_explanation_path)
         plt.close()
@@ -178,7 +178,7 @@ def analyze_image():
     plt.figure(figsize=(12, 6))
     plt.imshow(image_for_segmentation)
     plt.axis('off')
-    plt.title('Original Image')
+    # plt.title('Original Image')
     plt.tight_layout()
     plt.savefig(plot_path)
     plt.close()
