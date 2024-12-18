@@ -107,7 +107,12 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None
     heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
     heatmap = tf.squeeze(heatmap)
     heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
-    return heatmap.numpy()
+    
+    class_name = 'Malignant' if tf.argmax(predictions[0]) == 1 else 'Benign'
+    confidence_score = np.max(predictions[0]) * 100
+    
+    return heatmap.numpy(), class_name, confidence_score
+
 
 # Function to generate and save Grad-CAM image
 def save_gradcam(image_path, heatmap, cam_path="cam.jpg", alpha=0.4):
@@ -184,19 +189,30 @@ def analyze_image():
     plt.close()
 
     # Generate Grad-CAM heatmap and save it
-    heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name="conv5_block32_concat")
+    heatmap, class_name, confidence_score = make_gradcam_heatmap(img_array, model, last_conv_layer_name="conv5_block32_concat")
     if not os.path.exists('static/gradcam'):
         os.makedirs('static/gradcam')
     gradcam_path = os.path.join('static/gradcam', f"{file.filename.split('.')[0]}_gradcam.png")
     save_gradcam(image_path, heatmap, cam_path=gradcam_path)
+
+    gradcam_explanation = (f"The model predicts this lesion as {class_name} with a confidence of {confidence_score:.2f}%. ")
+    if class_name == 'Malignant':
+        gradcam_explanation += ("The red regions represent areas that the model believes to be most indicative of malignancy. "
+                                "These areas may correspond to the irregular texture, shape, or color associated with cancerous tissue.")
+    else:
+        gradcam_explanation += ("The red regions are less pronounced, suggesting that the model does not detect features associated "
+                                "with malignancy in this lesion. Smooth texture, uniform color, and regular shape are common signs "
+                                "of a benign lesion, but medical examination is recommended.")
 
     return jsonify({
         'result': 'cancerous' if is_cancerous else 'not cancerous',
         'textual_reasons': textual_reasons,
         'plot_url': plot_path,
         'lime_explanation_url': lime_explanation_path,
-        'gradcam_url': gradcam_path
+        'gradcam_url': gradcam_path,
+        'gradcam_explanation': gradcam_explanation
     })
+
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):
